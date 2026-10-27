@@ -26,15 +26,14 @@ from typing import Any, Dict
 from unittest.mock import MagicMock, patch
 
 import pytest
-
 from mech_client.infrastructure.config import get_mech_config
 from mech_client.infrastructure.config.constants import MECH_CONFIGS
 from mech_client.infrastructure.subgraph.client import DEFAULT_TIMEOUT
 from mech_client.infrastructure.subgraph.queries import (
     CHAIN_TO_MECH_FACTORY_TO_MECH_TYPE,
+    MechRecord,
     REPORT_QUERY_TIMEOUT,
     RESULTS_LIMIT,
-    MechRecord,
     query_erc8004_agent_id,
     query_mech_record,
     query_mm_mechs_info,
@@ -352,9 +351,7 @@ class TestQueryMmMechsInfo:
         assert len(result) == RESULTS_LIMIT
 
     @patch("mech_client.infrastructure.subgraph.queries.get_mech_config")
-    def test_query_mechs_no_subgraph_url(
-        self, mock_get_config: MagicMock
-    ) -> None:
+    def test_query_mechs_no_subgraph_url(self, mock_get_config: MagicMock) -> None:
         """Test query raises SubgraphError when subgraph URL not set."""
         # Setup mock config with no subgraph URL
         mock_config = MagicMock()
@@ -487,11 +484,14 @@ class TestQueryMechsChainWithoutSubgraph:
         blank = replace(get_mech_config("robinhood"), subgraph_url="")
         assert int(blank.mech_marketplace_contract, 16) != 0
 
-        with patch(
-            "mech_client.infrastructure.subgraph.queries.get_mech_config",
-            return_value=blank,
-        ), pytest.raises(
-            SubgraphError, match="Subgraph URL not set for chain config: robinhood"
+        with (
+            patch(
+                "mech_client.infrastructure.subgraph.queries.get_mech_config",
+                return_value=blank,
+            ),
+            pytest.raises(
+                SubgraphError, match="Subgraph URL not set for chain config: robinhood"
+            ),
         ):
             query_mm_mechs_info("robinhood")
 
@@ -629,7 +629,8 @@ class TestQueryMechsMalformedResponse:
         "record",
         [
             pytest.param(
-                {"address": "0xabc", "totalDeliveriesTransactions": "2"}, id="factory-missing"
+                {"address": "0xabc", "totalDeliveriesTransactions": "2"},
+                id="factory-missing",
             ),
             pytest.param(
                 {
@@ -721,7 +722,6 @@ class TestQueryMechsOverrideWarning:
         query_mm_mechs_info(chain)
 
         assert mock_logger.warning.called is warns
-
 
 
 MECH_ADDRESS = "0xc05e7412439bd7e91730a6880e18d5d5873f632c"
